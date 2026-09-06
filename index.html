@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5">
+<title>3rdSpace</title>
+<meta name="description" content="Meet people peer-to-peer, where you can check whether the host is farming the room.">
+
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#7fd0ef">
+<link rel="icon" href="./favicon-64.png" sizes="64x64" type="image/png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="3rdSpace">
+<meta name="mobile-web-app-capable" content="yes">
+
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+
+<div id="sky"></div>
+<div id="bubbles" aria-hidden="true"></div>
+
+<header>
+  <div class="brand"><span class="orb"></span><span class="wordmark">3rd<b>Space</b></span></div>
+  <div class="spacer"></div>
+  <nav class="scope" id="scopeToggle" aria-label="What are you looking for">
+    <button data-scope="dating" type="button">Dating</button>
+    <button data-scope="friendship" type="button">Friends</button>
+    <button data-scope="both" type="button" class="on">Both</button>
+  </nav>
+</header>
+
+<main>
+  <section class="view on" id="v-spaces">
+    <h2 class="sec">Spaces</h2>
+    <p class="hint">Every badge is computed <em>on your device</em> from what the node publishes. Nothing here is a verdict handed down by a server.</p>
+    <div id="spaces"></div>
+    <button class="ghost wide" id="btnHost" type="button" style="margin-top:6px">Host a space</button>
+  </section>
+
+  <section class="view" id="v-space">
+    <div id="spacePane"></div>
+  </section>
+
+  <section class="view" id="v-me">
+    <h2 class="sec">You</h2>
+    <div id="mePane"></div>
+  </section>
+</main>
+
+<!-- Inline SVG rather than emoji: emoji coverage varies by device and OS
+     version, and a missing glyph in the primary navigation is not a risk worth
+     taking for three icons. -->
+<nav class="tabs" id="tabs">
+  <button data-view="v-spaces" class="on" type="button">
+    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><ellipse cx="12" cy="12" rx="4" ry="8.5"/><path d="M3.9 9.2h16.2M3.9 14.8h16.2"/></svg>
+    Spaces
+  </button>
+  <button data-view="v-space" type="button">
+    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 12.4c0 3.9-3.8 7-8.5 7-1 0-2-.15-2.9-.42L4 20.5l1.7-3.5C4.3 15.75 3.5 14.16 3.5 12.4c0-3.87 3.8-7 8.5-7s8.5 3.13 8.5 7Z"/></svg>
+    Space
+  </button>
+  <button data-view="v-me" type="button">
+    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.6" r="3.9"/><path d="M4.8 20c.6-3.7 3.6-6 7.2-6s6.6 2.3 7.2 6"/></svg>
+    You
+  </button>
+</nav>
+
+<dialog id="sheet"><form method="dialog"><div class="sheet" id="sheetBody"></div></form></dialog>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>

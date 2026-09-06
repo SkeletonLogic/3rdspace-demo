@@ -1,0 +1,19 @@
+{
+  "id": "./",
+  "name": "3rdSpace",
+  "short_name": "3rdSpace",
+  "description": "Meet people peer-to-peer, and check for yourself whether the host is farming the room.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#bfe9fb",
+  "theme_color": "#7fd0ef",
+  "categories": ["social", "lifestyle"],
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
