@@ -9,7 +9,7 @@
  *     see a score, you can see why, and you can see how to recompute it.
  */
 
-import { sound, setEnabled, ensure as ensureAudio, play, previewAll } from './sound.js';
+import { sound, setEnabled, ensure as ensureAudio, play, previewAll } from './sound.js?v=de525bd754';
 
 const $ = (s) => document.querySelector(s);
 const el = (t, cls, txt) => {
@@ -42,11 +42,11 @@ let CORE = null;   // the detector bundle, once loaded
 
 async function tryDemo() {
   try {
-    const r = await fetch('./demo-data.json', { cache: 'no-cache' });
+    const r = await fetch('./demo-data.json?v=91b0060402', { cache: 'no-cache' });
     if (!r.ok) return false;
     const data = await r.json();
     if (data.magic !== '3rdspace-demo') return false;
-    CORE = await import('./core.bundle.js');
+    CORE = await import('./core.bundle.js?v=c98e2883ae');
     DEMO = data;
     return true;
   } catch {
