@@ -269,7 +269,9 @@ function renderSpaces() {
     card.append(r1);
 
     const meta = el('div', 'meta');
-    if (b.hostTitle) meta.append(el('span', 'tag', `@ ${b.hostTitle}`));
+    // Only worth showing when the host is not the room — otherwise it just
+    // repeats the title back at you.
+    if (b.hostTitle && b.hostTitle !== b.title) meta.append(el('span', 'tag', `@ ${b.hostTitle}`));
     meta.append(el('span', 'tag', b.scope === 'both' ? 'friends + dating' : b.scope));
     for (const t of b.topic.slice(0, 3)) meta.append(el('span', 'tag', t));
     meta.append(el('span', 'count', `${b.members} member${b.members === 1 ? '' : 's'}`));
