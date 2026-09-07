@@ -63,7 +63,7 @@ async function tryDemo() {
   } catch { /* no node here: fall through to the bundled payload */ }
 
   try {
-    const r = await fetch('./demo-data.json?v=6d4c36360a', { cache: 'no-cache' });
+    const r = await fetch('./demo-data.json?v=cb93abadea', { cache: 'no-cache' });
     if (!r.ok) return false;
     const data = await r.json();
     if (data.magic !== '3rdspace-demo') return false;

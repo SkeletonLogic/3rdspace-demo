@@ -68,7 +68,7 @@ Sound is synthesised live in the Web Audio API, no audio files. Toggle in
   node.
 - **A snapshot.** Timestamps are frozen at build time, so rate-based terms (the
   ban rate against a peer baseline) read slightly differently than they do
-  against a running node — the captured room scores 74 here versus 72 live.
+  against a running node.
 - The people, rooms and messages are synthetic.
 
 ## Honesty note
