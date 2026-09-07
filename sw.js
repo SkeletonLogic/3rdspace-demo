@@ -7,7 +7,7 @@
  * showing nothing. Network-first for data, cache-first for the shell.
  */
 
-const VERSION = '4f4552fbbf';
+const VERSION = 'edcb99ca36';
 const SHELL = `3rdspace-shell-${VERSION}`;
 
 // Relative, so the same worker serves both a node at the origin root and the
@@ -15,8 +15,8 @@ const SHELL = `3rdspace-shell-${VERSION}`;
 const ASSETS = [
   './',
   './index.html',
-  './app.css?v=a62bc433f0',
-  './app.js?v=1d25df78fb',
+  './app.css?v=be2556197b',
+  './app.js?v=36d906a9fb',
   './sound.js?v=de525bd754',
   './manifest.webmanifest',
   './icon-192.png',

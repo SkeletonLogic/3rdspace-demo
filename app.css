@@ -639,8 +639,8 @@ table.kv td:first-child { color: var(--ink-3); white-space: nowrap; font-weight:
   main { height: calc(100dvh - 62px - var(--safe-t)); display: grid; grid-template-columns: 380px 1fr; }
   .view { position: relative; display: block; padding: 18px 16px 24px; }
   .view#v-spaces { border-right: 1px solid rgba(255,255,255,.6); background: rgba(255,255,255,.16); }
-  .view#v-space, .view#v-me { display: none; }
-  .view#v-space.on, .view#v-me.on { display: block; }
+  .view#v-space, .view#v-me, .view#v-page { display: none; }
+  .view#v-space.on, .view#v-me.on, .view#v-page.on { display: block; }
   .view#v-spaces.on ~ .view { }
   nav.tabs { display: none; }
   .view { padding-bottom: 24px; }
@@ -651,6 +651,199 @@ table.kv td:first-child { color: var(--ink-3); white-space: nowrap; font-weight:
 @media (min-width: 900px) {
   /* On desktop the space list is always visible; the right pane shows either
      the space or the profile, so those two share the second column. */
-  .view#v-space, .view#v-me { grid-column: 2; grid-row: 1; }
+  .view#v-space, .view#v-me, .view#v-page { grid-column: 2; grid-row: 1; }
   .view#v-spaces { grid-column: 1; display: block; }
+}
+
+/* =============================================================================
+   M11 — the plain surface, and the one disclosure underneath it.
+   ========================================================================== */
+
+/* The verdict card leads with words. Its tint is the only colour signal, and it
+   matches the badge beside it so the two can never disagree on screen. */
+.card.verdict { border-left: 4px solid rgba(10,80,115,.25); }
+.card.verdict.ok   { border-left-color: #3fae4a; }
+.card.verdict.warn { border-left-color: #e0921a; }
+.card.verdict.bad  { border-left-color: #d94a3d; }
+.card.verdict.unk  { border-left-color: #8aa7b8; }
+
+.lead {
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  margin: 6px 0 0;
+}
+ul.because {
+  margin: 10px 0 0;
+  padding-left: 17px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+ul.because li { margin-bottom: 4px; }
+
+/* ONE affordance, everywhere. Same shape at every level of nesting, so "there
+   is more underneath" is a single gesture rather than six. */
+details.working { margin-top: 12px; }
+details.working > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--deep);
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255,255,255,.75), rgba(214,238,248,.7));
+  border: 1px solid rgba(63,169,216,.32);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+  width: fit-content;
+  user-select: none;
+}
+details.working > summary::-webkit-details-marker { display: none; }
+details.working > summary:active { transform: scale(.97); }
+details.working .chev { transition: transform .18s ease; display: inline-block; font-weight: 900; }
+details.working[open] > summary .chev { transform: rotate(90deg); }
+.workingbody { padding: 10px 0 2px; }
+.workingbody .card { background: rgba(255,255,255,.5); }
+.ev .det.flag { color: #97281c; font-weight: 600; }
+
+/* =============================================================================
+   Profile pages — the editor, the viewer, and the sealed frame.
+   ========================================================================== */
+
+.pagebar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.pagetitle { font-weight: 700; color: var(--deep); font-size: 15px; }
+
+/* The frame is the containment. It gets a fixed height and scrolls internally
+   because it runs no scripts, so it cannot tell us how tall it wants to be —
+   a deliberate consequence of not granting allow-scripts. */
+.pp-frame-box {
+  margin-top: 10px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(10,80,115,.18);
+  box-shadow: inset 0 2px 8px rgba(10,60,90,.12);
+  background: #fff;
+}
+iframe.pp-frame {
+  display: block;
+  width: 100%;
+  height: 58vh;
+  min-height: 320px;
+  border: 0;
+}
+
+.pp-themes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(126px, 1fr));
+  gap: 9px;
+  margin-top: 10px;
+}
+button.pp-theme {
+  display: block;
+  text-align: left;
+  padding: 0 0 9px;
+  overflow: hidden;
+  min-height: 0;
+}
+button.pp-theme.on { box-shadow: var(--gloss-top), 0 0 0 2px rgba(63,169,216,.6), var(--shadow-2); }
+.pp-swatch {
+  height: 58px;
+  display: flex; align-items: center; justify-content: center;
+  border-bottom: 1px solid rgba(10,80,115,.12);
+}
+.pp-chip {
+  padding: 5px 11px;
+  border: 1px solid;
+  font-weight: 800;
+  font-size: 13px;
+  box-shadow: 0 2px 6px -2px rgba(0,0,0,.35);
+}
+.pp-tname { font-weight: 700; font-size: 12.5px; padding: 7px 9px 0; color: var(--ink); }
+.pp-tblurb { font-size: 11px; color: var(--ink-3); padding: 2px 9px 0; line-height: 1.35; }
+
+.pp-knob { padding: 9px 0; border-bottom: 1px solid rgba(10,80,115,.08); }
+.pp-knob.off { opacity: .55; }
+.pp-klabel { font-size: 13px; font-weight: 600; color: var(--ink); display: block; margin-bottom: 6px; }
+.pp-kctl { display: flex; align-items: center; gap: 8px; }
+.pp-kctl input[type="color"] { width: 46px; min-height: 34px; padding: 2px; }
+.pp-kctl input[type="range"] { flex: 1; }
+.pp-kctl select, .pp-kctl input[type="text"], .pp-kctl input:not([type]) { flex: 1; }
+.pp-khelp { font-size: 11px; color: var(--ink-3); margin-top: 5px; line-height: 1.4; }
+
+.pp-block {
+  border: 1px solid rgba(10,80,115,.14);
+  border-radius: 12px;
+  padding: 10px 11px;
+  margin-top: 9px;
+  background: rgba(255,255,255,.45);
+}
+.pp-bhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+.pp-bkind { font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--deep); }
+.pp-btools { display: flex; gap: 4px; }
+button.tiny { min-height: 0; padding: 4px 9px; font-size: 12px; }
+.pp-thumb { max-width: 100%; border-radius: 9px; display: block; margin-bottom: 7px; }
+
+.pp-shelf { display: flex; flex-wrap: wrap; gap: 6px; }
+button.pp-stampchip {
+  min-height: 0; padding: 5px; width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+}
+button.pp-stampchip.on { box-shadow: var(--gloss-top), 0 0 0 2px rgba(63,169,216,.6), var(--shadow-2); }
+/* The stamps are drawn in CSS in the page's own stylesheet; the shelf reuses
+   the same shapes so what you pick is what you get. */
+.pp-stampchip .pp-stamp {
+  display: block; width: 22px; height: 22px; margin: 0;
+  background: radial-gradient(circle at 34% 28%, #fff, var(--deep));
+  box-shadow: inset 0 -2px 3px rgba(0,0,0,.25);
+}
+.pp-stampchip .pp-stamp-heart { border-radius: 50% 50% 8% 50%; transform: rotate(45deg); }
+.pp-stampchip .pp-stamp-star { clip-path: polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
+.pp-stampchip .pp-stamp-bolt { clip-path: polygon(58% 0,20% 55%,46% 55%,38% 100%,80% 42%,52% 42%); }
+.pp-stampchip .pp-stamp-orb, .pp-stampchip .pp-stamp-moon,
+.pp-stampchip .pp-stamp-sun, .pp-stampchip .pp-stamp-ring { border-radius: 50%; }
+.pp-stampchip .pp-stamp-ring { background: none; border: 4px solid var(--deep); }
+.pp-stampchip .pp-stamp-leaf { border-radius: 0 50% 0 50%; }
+.pp-stampchip .pp-stamp-drop { border-radius: 50% 50% 50% 0; transform: rotate(45deg); }
+.pp-stampchip .pp-stamp-square { border-radius: 3px; }
+.pp-stampchip .pp-stamp-diamond { border-radius: 3px; transform: rotate(45deg); }
+.pp-stampchip .pp-stamp-blink { border-radius: 3px; opacity: .5; }
+
+textarea.pp-code, .pp-block textarea {
+  width: 100%;
+  font-family: ui-monospace, Consolas, "Courier New", monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  resize: vertical;
+  white-space: pre;
+  overflow-x: auto;
+}
+pre.pp-src {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  background: rgba(10,60,90,.055);
+  border-radius: 9px;
+  padding: 9px 10px;
+  overflow-x: auto;
+  max-height: 300px;
+  overflow-y: auto;
+  color: var(--ink-2);
+  margin: 8px 0 0;
+}
+
+/* Refusals read as teaching, not as errors: what, why, and what to use. */
+.pp-removals { border-left: 4px solid #e0921a; }
+.pp-instead { color: #2f6d1f; font-weight: 600; margin-top: 3px; }
+
+.people { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+button.person { min-height: 0; padding: 7px 11px; font-size: 12px; }
+button.person.blocked { opacity: .5; }
+button.person small { display: block; font-size: 10px; color: var(--ink-3); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  details.working .chev { transition: none; }
 }

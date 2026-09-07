@@ -30,22 +30,44 @@ Three nodes appear in one browse list:
 | --- | --- |
 | **Belay & Chill** | an honest niche room — narrow, but narrow *on topic* |
 | **Crag Social** | the same shape, captured: an on-topic gate **plus** the host's personal type on age, build and politics |
-| **Quiet Room** | publishes no log at all, so it reads `UNAUDITABLE` rather than clean |
+| **Quiet Room** | publishes no log at all, so it reads *can't tell* rather than clean |
 
-Open **Audit** on the first two and compare. The captured room names the
-off-topic clauses it is flagged for and shows a cryptographic proof (a ban
-citing a rule the log introduces *afterwards*). The honest one shows *why* its
-narrowness does not count against it — its selectivity is all on the dimensions
-the room is actually about.
+Open **Audit** on the first two and compare. Each reads as a sentence — *"the
+rule for getting in filters on your age, your body and your politics — things
+this room is not about"* — with every number, formula, evidence row and log entry
+one tap behind **Show the working**. Nothing is hidden; it is demoted, because
+the person who wants to check an inclusion proof by hand still has to be able to.
+
+The captured room also carries a cryptographic proof: a ban citing a rule its own
+log introduces *afterwards*. That is not a score and is never blended into one.
+
+### Profile pages
+
+Open **Room** on either node and tap somebody. Everyone has a page they can
+style, at three rungs that all edit one document — pick a theme, nudge the knobs,
+or write the HTML and CSS yourself.
+
+One of the seeded pages deliberately carries a tracking beacon, a remote image
+and a `<script>`, so you can watch the renderer refuse them and say why in plain
+words. Profile pages never run scripts, render in a sandboxed frame with a
+content policy that permits **no network origins at all**, and carry their own
+images inside the author's signature — so a host cannot swap somebody's photo,
+and a stylesheet cannot become a visit tracker that reports who read a profile.
+
+Behind that claim: 70 adversarial payloads, 70 contained, and a browser
+measurement in which rendering all three pages made zero requests to the beacon's
+host — with the sanitiser *switched off* as well as on, so the two layers are
+known to work independently.
 
 Sound is synthesised live in the Web Audio API, no audio files. Toggle in
 **You → Sound**.
 
 ## Limits of the demo
 
-- **Read-only.** Joining, posting and hosting need a live node.
-- **A snapshot.** Timestamps are frozen at build time, so rate-based terms
-  (the ban rate against a peer baseline) read slightly differently than they do
+- **Read-only.** Joining, posting, publishing a page and hosting need a live
+  node.
+- **A snapshot.** Timestamps are frozen at build time, so rate-based terms (the
+  ban rate against a peer baseline) read slightly differently than they do
   against a running node — the captured room scores 74 here versus 72 live.
 - The people, rooms and messages are synthetic.
 
@@ -57,6 +79,12 @@ capture-by-predicate — the centrepiece attack — is caught 33% of the time, a
 four of five pre-registered failure criteria were met. One of the two founding
 hypotheses did not survive measurement and is written up as failed rather than
 tuned away.
+
+Profile pages made one thing measurably worse, and the number is published rather
+than buried: a free-form page is a channel none of the detectors read, so a host
+can coordinate through it and gerrymander a room while publishing a clean rule.
+Measured, detection collapses — ROC AUC 0.830 → 0.631, and the detector the suite
+rests on reads exactly zero in **100%** of those rooms.
 
 ---
 

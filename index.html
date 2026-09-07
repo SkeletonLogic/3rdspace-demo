@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-title" content="3rdSpace">
 <meta name="mobile-web-app-capable" content="yes">
 
-<link rel="stylesheet" href="./app.css?v=a62bc433f0">
+<link rel="stylesheet" href="./app.css?v=be2556197b">
 </head>
 <body>
 
@@ -48,6 +48,18 @@
     <h2 class="sec">You</h2>
     <div id="mePane"></div>
   </section>
+
+  <!-- Profile pages. Not in the tab bar: you get here from "You" or from a
+       person in a room, and the back button returns you to whichever it was.
+       Everything an author wrote is rendered inside a sandboxed iframe that
+       this pane creates; nothing in it can reach the app around it. -->
+  <section class="view" id="v-page">
+    <div class="pagebar">
+      <button class="ghost" id="btnPageBack" type="button">‹ Back</button>
+      <span class="pagetitle" id="pageTitle"></span>
+    </div>
+    <div id="pagePane"></div>
+  </section>
 </main>
 
 <!-- Inline SVG rather than emoji: emoji coverage varies by device and OS
@@ -70,6 +82,6 @@
 
 <dialog id="sheet"><form method="dialog"><div class="sheet" id="sheetBody"></div></form></dialog>
 
-<script type="module" src="./app.js?v=1d25df78fb"></script>
+<script type="module" src="./app.js?v=36d906a9fb"></script>
 </body>
 </html>

@@ -154,6 +154,15 @@ function bans(view) {
   }
   return out;
 }
+function contentRemovals(view) {
+  const out = [];
+  for (const e of view.entries) {
+    if (e.body.t !== "PAGE_REMOVE") continue;
+    if (typeof e.body.author !== "string" || !e.body.author) continue;
+    out.push({ entry: e, author: e.body.author, ruleId: e.body.ruleId ?? "(none)", reason: e.body.reason ?? "", ts: e.ts });
+  }
+  return out;
+}
 function malformedEntries(view) {
   return view.entries.filter((e) => {
     if (e.body.t === "BAN" || e.body.t === "KICK") return typeof e.body.target !== "string" || !e.body.target;
@@ -568,6 +577,51 @@ function percentile(values, v) {
   const below = values.filter((x) => x < v).length;
   return below / values.length;
 }
+function pageRemovalScore(view) {
+  const removals = contentRemovals(view);
+  if (removals.length === 0) return { score: 0, rows: [], n: 0 };
+  const ruleSeq = /* @__PURE__ */ new Map();
+  for (const e of view.entries) {
+    if (e.body.t === "RULESET_SET") {
+      for (const r of e.body.rules) if (!ruleSeq.has(r.id)) ruleSeq.set(r.id, e.seq);
+    }
+  }
+  const scored = removals.map((r) => {
+    const before = membersAt(view, r.ts - 1);
+    const withHost = before.includes(view.host) ? before : [view.host, ...before];
+    const g = buildGraph(view, withHost);
+    const kk = (a, c) => a < c ? `${a}|${c}` : `${c}|${a}`;
+    const M = (a, c) => g.w.get(kk(a, c))?.m ?? null;
+    const peerMeans = [];
+    for (const u of before) {
+      const vals = before.filter((v) => v !== u).map((v) => M(u, v)).filter((x) => x !== null);
+      if (vals.length) peerMeans.push(vals.reduce((a, c) => a + c, 0) / vals.length);
+    }
+    const hostVals = before.map((u) => M(u, view.host)).filter((x) => x !== null);
+    const tPeerVals = before.filter((v) => v !== r.author).map((v) => M(r.author, v)).filter((x) => x !== null);
+    const tPeer = tPeerVals.length ? tPeerVals.reduce((a, c) => a + c, 0) / tPeerVals.length : null;
+    const tHost = M(r.author, view.host);
+    const f1 = tPeer !== null && tHost !== null ? Math.max(0, percentile(peerMeans, tPeer) - percentile(hostVals, tHost)) : 0;
+    const intro = ruleSeq.get(r.ruleId);
+    const f4 = intro === void 0 ? 1 : intro > r.entry.seq ? 1 : r.reason.length > 0 ? 0 : 0.5;
+    const score = 1 - (1 - BETA.f1 * f1) * (1 - BETA.f4 * f4);
+    return { r, f1, f4, score };
+  });
+  const mean = scored.reduce((a, x) => a + x.score, 0) / scored.length;
+  const rows = scored.sort((a, b) => b.score - a.score).slice(0, 3).map((x) => ({
+    label: `Profile page of ${short(x.r.author)} removed (seq ${x.r.entry.seq})`,
+    detail: [
+      x.f1 > 0.2 ? "they were well matched to the room and poorly matched to the host" : "no match-pattern marker",
+      x.f4 >= 1 ? "the rule cited does not predate the removal" : x.f4 > 0 ? "no reason recorded" : `cited rule "${x.r.ruleId}"`
+    ].join("; ") + ` [f1=${x.f1.toFixed(2)} f4=${x.f4.toFixed(2)}]`,
+    weight: x.score
+  }));
+  rows.push({
+    label: "Why page removals count here",
+    detail: `${removals.length} profile page(s) taken down by this host. Removal is a log entry, so it is checkable \u2014 and a host who removes the pages of exactly the people the room was for is doing by deletion what the ban forensics above look for.`
+  });
+  return { score: Math.max(0, Math.min(1, mean)), rows, n: removals.length };
+}
 function detectBf(view) {
   const id = "BF";
   const allBans = bans(view);
@@ -610,14 +664,18 @@ function detectBf(view) {
     const scale = Math.max(1e-6, 1.4826 * mad);
     brZ = (rate - med) / scale;
   }
+  const pr = pageRemovalScore(view);
   if (allBans.length === 0) {
     return {
       id,
-      score: 0,
+      score: pr.score,
       state: "ok",
-      headline: `no bans in ${days.toFixed(0)} member-days`,
-      evidence: [{ label: "Ban rate", detail: `0 bans; peer baseline drawn from ${peers.length} comparable rooms` }],
-      raw: { bans: 0, rate: 0, brZ, peers: peers.length }
+      headline: pr.n ? `no bans in ${days.toFixed(0)} member-days, but ${pr.n} profile page(s) removed` : `no bans in ${days.toFixed(0)} member-days`,
+      evidence: [
+        { label: "Ban rate", detail: `0 bans; peer baseline drawn from ${peers.length} comparable rooms` },
+        ...pr.rows
+      ],
+      raw: { bans: 0, rate: 0, brZ, peers: peers.length, pageRemovals: pr.n, pageRemovalScore: pr.score }
     };
   }
   const perBan = [];
@@ -705,7 +763,8 @@ function detectBf(view) {
   }
   const meanBan = perBan.reduce((a, b) => a + b.score, 0) / perBan.length;
   const rateMult = Math.max(0.5, Math.min(2, 1 + brZ / 3));
-  const bf = Math.max(0, Math.min(1, meanBan * rateMult));
+  const banPart = Math.max(0, Math.min(1, meanBan * rateMult));
+  const bf = pr.n === 0 ? banPart : 1 - (1 - banPart) * (1 - pr.score);
   const worst = [...perBan].sort((a, b) => b.score - a.score).slice(0, 4);
   const evidence = worst.map((w) => ({
     label: `Ban of ${short(w.target)} (seq ${w.entry.seq})`,
@@ -720,6 +779,7 @@ function detectBf(view) {
       weight: 0
     });
   }
+  evidence.push(...pr.rows);
   evidence.push({
     label: "Ban rate vs peers",
     detail: peers.length >= 3 ? `${(rate * 1e3).toFixed(2)} bans per 1000 member-days; z = ${brZ.toFixed(2)} against ${peers.length} peer rooms (${peerBasis})` : `${(rate * 1e3).toFixed(2)} bans per 1000 member-days; too few comparable rooms (${peers.length}) for a baseline, so no rate multiplier applied`
@@ -728,9 +788,9 @@ function detectBf(view) {
     id,
     score: bf,
     state: "ok",
-    headline: `${allBans.length} ban(s), mean forensic score ${meanBan.toFixed(2)}, rate z = ${brZ.toFixed(2)}`,
+    headline: `${allBans.length} ban(s), mean forensic score ${meanBan.toFixed(2)}, rate z = ${brZ.toFixed(2)}` + (pr.n ? `; ${pr.n} page removal(s) at ${pr.score.toFixed(2)}` : ""),
     evidence,
-    raw: { bf, meanBan, brZ, bans: allBans.length, rate, peers: peers.length }
+    raw: { bf, meanBan, banPart, brZ, bans: allBans.length, rate, peers: peers.length, pageRemovals: pr.n, pageRemovalScore: pr.score }
   };
 }
 
@@ -1063,6 +1123,171 @@ function detectIwr(view, provider = new VouchWebProvider()) {
   return { rep, pack, weights };
 }
 
+// src/core/detectors/dr.ts
+var MIN_CHECKABLE = 3;
+var SHRINK_K = 5;
+var ONE_HOT_MASS = 0.9;
+function evaluatePublished(view, predicate, buckets) {
+  const failed = [];
+  const unknown = [];
+  if (!buckets) return { verdict: "cannot-tell", failed, unknown: predicate.clauses.map((c) => c.dim) };
+  for (const c of predicate.clauses) {
+    const d = dimById(view.schema, c.dim);
+    if (!d) continue;
+    const b = buckets[c.dim];
+    if (!b || b.length !== bucketCount(d)) {
+      unknown.push(c.dim);
+      continue;
+    }
+    let best = 0;
+    let total = 0;
+    for (let i = 0; i < b.length; i++) {
+      total += b[i];
+      if (b[i] > b[best]) best = i;
+    }
+    if (total <= 0 || b[best] / total < ONE_HOT_MASS) {
+      unknown.push(c.dim);
+      continue;
+    }
+    const thr = c.accept.t === "set" || c.accept.t === "bool" ? 1 : 0.5;
+    let minMu = Infinity;
+    let maxMu = -Infinity;
+    for (const v of bucketSamples(d, best)) {
+      const mu = evalAcceptance(d, c.accept, v);
+      minMu = Math.min(minMu, mu);
+      maxMu = Math.max(maxMu, mu);
+    }
+    if (maxMu < thr) {
+      failed.push(c.dim);
+      continue;
+    }
+    if (minMu < thr) {
+      unknown.push(c.dim);
+      continue;
+    }
+  }
+  if (unknown.length > 0) return { verdict: "cannot-tell", failed, unknown };
+  return { verdict: failed.length ? "fails" : "passes", failed, unknown };
+}
+function bucketSamples(d, i) {
+  if (!d) return [i];
+  switch (d.kind.t) {
+    case "likert":
+      return [i + 1];
+    case "boolean":
+      return [i === 1];
+    case "categorical":
+      return [d.kind.options[i] ?? d.kind.options[0]];
+    case "numeric": {
+      const { min, max, bins } = d.kind;
+      const w = (max - min) / bins;
+      return [min + i * w, min + (i + 0.25) * w, min + (i + 0.5) * w, min + (i + 0.75) * w, min + (i + 1) * w];
+    }
+  }
+}
+function detectDr(view) {
+  const id = "DR";
+  const blank = (state, headline, raw = {}) => ({
+    id,
+    score: 0,
+    state,
+    headline,
+    evidence: [],
+    raw
+  });
+  const knocks = /* @__PURE__ */ new Map();
+  for (const e of view.entries) {
+    if (e.body.t !== "JOIN_REQUEST") continue;
+    if (typeof e.body.applicant !== "string" || !e.body.applicant) continue;
+    knocks.set(e.body.applicant, e.body.buckets ?? {});
+  }
+  const byVersion = /* @__PURE__ */ new Map();
+  for (const h of view.predicateHistory) byVersion.set(h.version, h.predicate);
+  const rejects = [];
+  for (const e of view.entries) {
+    if (e.body.t !== "REJECT") continue;
+    if (typeof e.body.applicant !== "string" || !e.body.applicant) continue;
+    rejects.push({ entry: e, applicant: e.body.applicant, outcome: e.body.outcome, version: e.body.predicateVersion });
+  }
+  if (rejects.length === 0) {
+    return blank("ok", "nobody has been turned away here", { rejects: 0, checkable: 0, unexplained: 0 });
+  }
+  if (view.predicateHistory.length === 0) {
+    return blank("unauditable", "the node publishes no predicate history, so its own rule cannot be applied to its own rejections", { rejects: rejects.length });
+  }
+  let checkable = 0;
+  let unexplained = 0;
+  let statedDiscretion = 0;
+  let contradicted = 0;
+  const hits = [];
+  for (const r of rejects) {
+    const predicate = byVersion.get(r.version) ?? view.predicateHistory.at(-1)?.predicate;
+    if (!predicate) continue;
+    if (r.outcome === "indeterminate") continue;
+    const { verdict } = evaluatePublished(view, predicate, knocks.get(r.applicant));
+    if (verdict === "cannot-tell") continue;
+    checkable++;
+    if (verdict !== "passes") continue;
+    unexplained++;
+    if (r.outcome === "host-discretion") statedDiscretion++;
+    else contradicted++;
+    if (hits.length < 6) hits.push({ seq: r.entry.seq, who: r.applicant, outcome: r.outcome });
+  }
+  if (checkable < MIN_CHECKABLE) {
+    return blank(
+      "insufficient-data",
+      `only ${checkable} of ${rejects.length} rejection(s) can be checked against the published rule \u2014 a rate needs more than that, and a room with few rejections is not thereby innocent`,
+      { rejects: rejects.length, checkable, unexplained }
+    );
+  }
+  const rate = unexplained / checkable;
+  const shrink = checkable / (checkable + SHRINK_K);
+  const dr = Math.max(0, Math.min(1, rate * shrink));
+  const evidence = [];
+  for (const h of hits) {
+    evidence.push({
+      label: `${short(h.who)} was turned away (entry ${h.seq})`,
+      detail: h.outcome === "host-discretion" ? "they met every condition this room publishes, and the host recorded the reason as their own discretion. That is hand-picking, done in the open." : "they met every condition this room publishes, and the host recorded the rejection as a rule failure. The host\u2019s own log disagrees with the host\u2019s own rule.",
+      weight: 1 / Math.max(1, checkable)
+    });
+  }
+  if (unexplained === 0) {
+    evidence.push({
+      label: "Every rejection is explained by the published rule",
+      detail: `${checkable} rejection(s) checked against the predicate version each one cites; all of them genuinely failed it`
+    });
+  }
+  evidence.push({
+    label: "How this is counted",
+    detail: `${unexplained} of ${checkable} checkable rejection(s) pass the room\u2019s own rule (${statedDiscretion} recorded as host discretion, ${contradicted} recorded as a rule failure that was not one). ${rejects.length - checkable} more could not be checked and are excluded, not assumed.`
+  });
+  evidence.push({
+    label: "Reproduce this",
+    detail: "for each REJECT, take the applicant\u2019s buckets from their own JOIN_REQUEST, take the predicate version the rejection cites, and evaluate one against the other. A rejection only counts here if the applicant passes at every point of their published bucket, so bucket coarseness cannot explain it."
+  });
+  evidence.push({
+    label: "What this does not say",
+    detail: "turning away someone who passes is not proof of capture \u2014 a host may have a good reason that is not in the rule. It does mean the published rule is not the whole rule."
+  });
+  return {
+    id,
+    score: dr,
+    state: "ok",
+    headline: `DR = ${dr.toFixed(3)} \u2014 ${unexplained} of ${checkable} checkable rejections pass the room\u2019s own rule`,
+    evidence,
+    raw: {
+      dr,
+      rate,
+      checkable,
+      unexplained,
+      statedDiscretion,
+      contradicted,
+      rejects: rejects.length,
+      shrink
+    }
+  };
+}
+
 // src/core/proofs.ts
 function detectPostHocRule(entries) {
   const out = [];
@@ -1097,14 +1322,14 @@ function detectPostHocRule(entries) {
 }
 
 // src/core/detectors/index.ts
-var FEATURES = ["HCC", "HCC_W", "PP", "PD", "BF", "SS", "PACK", "IWR"];
+var FEATURES = ["HCC", "HCC_W", "PP", "PD", "BF", "SS", "PACK", "IWR", "DR"];
 var DETECTOR_VERSION = "0.1.0";
 var UNIFORM_MODEL = {
   kind: "uniform",
   intercept: -2.2,
-  coef: { HCC: 1, HCC_W: 1, PP: 1, PD: 1, BF: 1, SS: 1, PACK: 1, IWR: 1 },
-  mean: { HCC: 0, HCC_W: 0, PP: 0, PD: 0, BF: 0, SS: 0, PACK: 0, IWR: 0 },
-  sd: { HCC: 1, HCC_W: 1, PP: 1, PD: 1, BF: 1, SS: 1, PACK: 1, IWR: 1 }
+  coef: { HCC: 1, HCC_W: 1, PP: 1, PD: 1, BF: 1, SS: 1, PACK: 1, IWR: 1, DR: 1 },
+  mean: { HCC: 0, HCC_W: 0, PP: 0, PD: 0, BF: 0, SS: 0, PACK: 0, IWR: 0, DR: 0 },
+  sd: { HCC: 1, HCC_W: 1, PP: 1, PD: 1, BF: 1, SS: 1, PACK: 1, IWR: 1, DR: 1 }
 };
 function sigmoid(x) {
   return 1 / (1 + Math.exp(-x));
@@ -1123,7 +1348,8 @@ function runDetectors(view, opts = {}) {
       BF: detectBf(view),
       SS: detectSs(view),
       PACK: iwr.pack,
-      IWR: iwr.rep
+      IWR: iwr.rep,
+      DR: detectDr(view)
     },
     weights: iwr.weights
   };
@@ -1182,6 +1408,7 @@ export {
   buildReport,
   combine,
   detectBf,
+  detectDr,
   detectHcc,
   detectIwr,
   detectPd,
